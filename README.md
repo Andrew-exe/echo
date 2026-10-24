@@ -97,6 +97,9 @@ Linux `.venv` cannot be reused by Windows Python. Open **Windows PowerShell**
 (not a WSL shell) and use the WSL network path:
 
 ```powershell
+# Open PowerShell on Windows, then access the WSL checkout.
+cd \\wsl.localhost\Ubuntu\home\andre\projects\Echo
+
 # One-time Windows environment (already created on the current machine)
 py -3.13 -m venv "$env:USERPROFILE\objectecho-win\.venv"
 & "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install --upgrade pip
@@ -107,7 +110,6 @@ py -3.13 -m venv "$env:USERPROFILE\objectecho-win\.venv"
 & "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install "open_clip_torch>=2.24,<4" Pillow
 
 # Run the WSL-hosted source with Windows camera/audio
-cd \\wsl.localhost\Ubuntu\home\andre\projects\Echo
 & "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" main.py --data-dir "$env:USERPROFILE\objectecho-data"
 ```
 
