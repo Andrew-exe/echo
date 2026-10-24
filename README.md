@@ -89,6 +89,33 @@ python main.py --list-objects
 python main.py                     # starts, then exits if no camera is attached
 ```
 
+#### Windows hardware with the source staying in WSL
+
+This is the recommended setup for this workspace: keep the one checkout in WSL,
+but use a Windows Python environment and a Windows-local data directory. The
+Linux `.venv` cannot be reused by Windows Python. Open **Windows PowerShell**
+(not a WSL shell) and use the WSL network path:
+
+```powershell
+# One-time Windows environment (already created on the current machine)
+py -3.13 -m venv "$env:USERPROFILE\objectecho-win\.venv"
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install --upgrade pip
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install -r requirements.txt
+
+# Optional CLIP backend
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install "open_clip_torch>=2.24,<4" Pillow
+
+# Run the WSL-hosted source with Windows camera/audio
+cd \\wsl.localhost\Ubuntu\home\andre\projects\Echo
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" main.py --data-dir "$env:USERPROFILE\objectecho-data"
+```
+
+Why the explicit data directory: SQLite and rapid image/WAV writes should live on
+the Windows filesystem. Pointing `--data-dir` at `\\wsl.localhost\...` puts the
+SQLite database on WSL's network filesystem and is not recommended. Code changes
+made in WSL are picked up immediately by the Windows run.
+
 For a fresh WSL checkout:
 
 ```bash
