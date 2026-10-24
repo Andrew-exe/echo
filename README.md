@@ -71,6 +71,43 @@ If you have a supported NVIDIA GPU, install PyTorch with the CUDA command from
 pytorch.org instead. `--clip-device auto` uses CUDA when available, otherwise
 CPU.
 
+### Running in WSL2
+
+The code, tests, storage tooling, and CLIP encoder work inside WSL2, but stock
+WSL does not expose the laptop webcam, microphone, or speakers to Linux. WSLg
+can display the OpenCV preview window on the Windows desktop, but the live A/P
+demo still needs camera and audio devices. The current WSL environment here has
+no `/dev/video*`; PortAudio's ALSA backend also reports no devices.
+
+From this repository in WSL:
+
+```bash
+cd /home/andre/projects/Echo
+source .venv/bin/activate          # this workspace already has dependencies
+python -m pytest -q                # 34 passed, 1 optional CLIP test skipped
+python main.py --list-objects
+python main.py                     # starts, then exits if no camera is attached
+```
+
+For a fresh WSL checkout:
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv libgl1 libportaudio2 v4l-utils
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+An external **USB** webcam can sometimes be forwarded with `usbipd-win` from an
+elevated Windows PowerShell, then attached with `usbipd attach --wsl --busid
+<BUSID>` and checked with `v4l2-ctl --list-devices`. Internal laptop cameras
+usually cannot be detached this way. Microphone/speaker forwarding into WSL is
+less reliable than camera forwarding. For the hackathon demo and video, run the
+app natively in Windows; use WSL for development and tests. If `python main.py
+--list-devices` reports no devices after forwarding, that is a WSL/PortAudio
+limitation, not an ObjectEcho recognition issue.
+
 ### First-run model download warning
 
 When CLIP is installed and `encoder_backend` is `auto` (the default), the first
