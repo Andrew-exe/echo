@@ -1,0 +1,2 @@
+# Optional offline text-to-speech announcements (Windows SAPI via pyttsx3).
+pyttsx3>=2.90

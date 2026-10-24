@@ -1,0 +1,15 @@
+# Optional CLIP global-embedding backend. ORB local matching is still used for
+# instance identity. Install this after the core requirements if you want CLIP.
+# First run downloads ViT-B-32/openai weights from the open_clip/HF cache.
+#
+# Recommended CPU-only Windows install (avoids a huge CUDA download and keeps
+# torch/torchvision matched):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install "open_clip_torch>=2.24,<4" Pillow
+#
+# A plain `pip install -r requirements-vision.txt` also works if you deliberately
+# want the default PyPI PyTorch build/GPU stack.
+torch>=2.2
+torchvision>=0.17
+open_clip_torch>=2.24,<4
+Pillow>=10

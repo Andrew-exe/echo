@@ -1,0 +1,33 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Runtime data (keep directories, ignore user content)
+data/objects/*
+!data/objects/.gitkeep
+data/recordings/*
+!data/recordings/.gitkeep
+data/*.sqlite3
+data/*.sqlite3-*
+data/*.db
+*.wav.tmp
+
+# Local config and debug artifacts
+config.json
+config.local.json
+*.log
+models/
+.cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

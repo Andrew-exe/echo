@@ -1,0 +1,22 @@
+{
+  "camera_index": 0,
+  "crop_ratio": 0.6,
+  "local_mask_width": 0.7,
+  "local_mask_height": 0.82,
+  "show_preview": true,
+  "mirror_preview": true,
+  "record_seconds": 6.0,
+  "sample_rate": 48000,
+  "input_device": null,
+  "output_device": null,
+  "encoder_backend": "auto",
+  "clip_model": "ViT-B-32",
+  "clip_pretrained": "openai",
+  "clip_device": "auto",
+  "min_score": 0.58,
+  "min_margin": 0.1,
+  "min_candidate_score": 0.32,
+  "min_local_for_match": 0.42,
+  "tts_enabled": false,
+  "debug": false
+}

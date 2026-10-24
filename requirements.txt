@@ -1,0 +1,8 @@
+# Core MVP. Works fully offline with the ORB/classical-vision path.
+numpy>=1.26,<3
+opencv-python>=4.9,<6
+sounddevice>=0.4.6,<1
+soundfile>=0.12,<1
+
+# Test runner (safe to omit for the demo)
+pytest>=8,<10
