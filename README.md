@@ -7,6 +7,16 @@ object, leave a voice note, and later bring the same object back to hear that
 note. This repository is a working hackathon MVP for the **No App** track. The
 webcam and keyboard stand in for a future wearable camera and voice interface.
 
+The primary demo is now a polished **local web interface** with a live camera
+feed, continuous recognition status, captured reference images, and playable
+voice notes. The original keyboard-first OpenCV application remains available as
+a screenless fallback.
+
+![ObjectEcho web interface](docs/web-preview.png)
+
+*Web UI preview. The camera feed and objects shown in this documentation image
+are synthetic test data, not a claim about a physical demo run.*
+
 ## The problem
 
 Physical objects are full of useful context that is invisible to software:
@@ -17,6 +27,10 @@ what if an object itself could carry a voice memory?
 
 ## What works
 
+- Local browser UI (`python main.py --web`) with a live camera feed, confidence
+  badge, object cards, captured images, and playable saved notes.
+- Continuous live recognition: when a known object returns to view, its card
+  lights up and the recognition banner identifies it.
 - Live webcam loop with a configurable central recognition crop.
 - Attach a real WAV voice recording (default 6 seconds) to an object.
 - Register new objects and add multiple notes to existing objects.
@@ -30,8 +44,9 @@ what if an object itself could carry a voice memory?
 - Persistent SQLite storage across restarts: objects, reference views,
   embeddings, ORB features, and audio notes.
 - Audible start/end tones, no-match and ambiguity cues, optional offline TTS.
-- Optional developer preview with a central reticle. `--no-preview` runs
-  without any window and accepts terminal keys.
+- Optional OpenCV preview with a central reticle. `--no-preview` runs the legacy
+  app without any window and accepts terminal keys.
+- Human-confirmation cards in the web UI whenever visual identity is ambiguous.
 - Offline-first operation. No cloud API or paid service is required.
 
 ## Quick start (Windows 11 PowerShell)
@@ -49,17 +64,26 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Start the app:
+Start the web interface:
+
+```powershell
+python main.py --web
+```
+
+The app opens `http://127.0.0.1:8000` automatically. Camera capture, microphone
+recording, recognition, SQLite data, and WAV files stay in the Python process;
+the browser is the visual interface. If the browser does not open, visit the URL
+printed in the terminal.
+
+The original keyboard-first OpenCV interface is still available:
 
 ```powershell
 python main.py
 ```
 
-Click the debug preview once so it receives keyboard input. You can also leave
-the terminal focused because terminal key input is supported. On the first
-recognition action the app loads the image encoder. With the core requirements
-above, it uses the fully offline classical/ORB fallback and needs no download.
-For the strongest semantic evidence, install the optional CLIP backend:
+On startup the app loads the image encoder. With the core requirements above, it
+uses the fully offline classical/ORB fallback and needs no download. For the
+strongest semantic evidence, install the optional CLIP backend:
 
 ```powershell
 # CPU-only PyTorch wheels (recommended for a demo laptop)
@@ -84,9 +108,9 @@ From this repository in WSL:
 ```bash
 cd /home/andre/projects/Echo
 source .venv/bin/activate          # this workspace already has dependencies
-python -m pytest -q                # 34 passed, 1 optional CLIP test skipped
+python -m pytest -q                # 37 passed, 1 optional CLIP test skipped
 python main.py --list-objects
-python main.py                     # starts, then exits if no camera is attached
+python main.py --web               # browser UI; exits if no camera is attached
 ```
 
 #### Windows hardware with the source staying in WSL
@@ -109,8 +133,8 @@ py -3.13 -m venv "$env:USERPROFILE\objectecho-win\.venv"
 & "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 & "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" -m pip install "open_clip_torch>=2.24,<4" Pillow
 
-# Run the WSL-hosted source with Windows camera/audio
-& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" main.py --data-dir "$env:USERPROFILE\objectecho-data"
+# Run the WSL-hosted source with Windows camera/audio + web UI
+& "$env:USERPROFILE\objectecho-win\.venv\Scripts\python.exe" main.py --web --data-dir "$env:USERPROFILE\objectecho-data"
 ```
 
 Why the explicit data directory: SQLite and rapid image/WAV writes should live on
@@ -144,7 +168,7 @@ run downloads the `ViT-B-32/openai` weights (roughly 350 MB) from the
 open_clip/Hugging Face cache. This can take a minute or more. The weights are
 cached for later runs; ObjectEcho does not download them repeatedly. To skip
 CLIP entirely, run with `python main.py --encoder classic`. CUDA is optional;
-CPU inference is fast enough for the A/P button-driven workflow.
+CPU inference is fast enough for the button-driven web UI and legacy A/P workflow.
 
 ### Optional spoken status
 
@@ -153,8 +177,8 @@ pip install -r requirements-tts.txt
 python main.py --tts
 ```
 
-TTS uses Windows SAPI through `pyttsx3`. It is optional; beeps provide the
-essential audible feedback without it.
+TTS uses Windows SAPI through `pyttsx3`. It is optional and applies to the
+legacy OpenCV interface; the web UI provides visual + audible recording cues.
 
 ## Exact command to run
 
@@ -182,7 +206,28 @@ All settings can also live in `config.json`; copy `config.example.json` as a
 starting point. The file is optional and is ignored by git. Command-line flags
 override it.
 
-## Keyboard controls
+## Using the web interface
+
+- **Attach a note** captures the centered object and records six seconds of the
+  laptop microphone. A card appears immediately with the captured reference
+  image and an audio player for the note.
+- **Play its notes** recognizes the centered object and plays its saved WAVs in
+  the browser.
+- **Add another reference view** teaches an existing object another angle.
+- A green **IN VIEW** badge and matching object card appear continuously whenever
+  the camera sees a known object. No button press is needed for this status.
+- If the model is uncertain, the UI shows **Confirm identity** with the captured
+  image and candidate cards. Nothing is attached or played until you make an
+  explicit choice. Choose the correct object or **Create new object** /
+  **Cancel**.
+- Startup, live recognition, and all object memories survive a server restart.
+
+The web server binds to `127.0.0.1` by default. It is a local demo, not a public
+multi-user service. Browser audio playback starts after your click on **Play its
+notes** or a note player. Recordings always use the microphone attached to the
+machine running Python, not necessarily the viewer's browser device.
+
+## Keyboard controls (legacy OpenCV interface)
 
 | Key | Action |
 | --- | --- |
@@ -197,17 +242,15 @@ override it.
 | **X** | Cancel a pending uncertain choice. |
 | **T** | Speak the current status (requires `--tts`). |
 
-The required A/P/R/L/Q workflow is the primary interface. With no preview,
-all keys work in the terminal. With the preview open, click it first if terminal
-keys are not reaching the app.
+This is the legacy screenless fallback. The A/P/R/L/Q workflow requires no
+mouse. With no preview, all keys work in the terminal. With the preview open,
+click it first if terminal keys are not reaching the app.
 
-The OpenCV preview is **developer tooling**, not the intended user interface.
-It displays the target reticle, match candidates, and diagnostics. The core
-experience is still camera + microphone + speaker: hold the object, press A,
-speak; later hold it and press P. The future product replaces keyboard triggers
+The OpenCV preview displays the target reticle, match candidates, and
+diagnostics for development. The future product would replace keyboard triggers
 with wearable gestures and spoken commands.
 
-## Three-object demo walkthrough
+## Three-object web demo walkthrough
 
 Recommended objects: a colorful labeled bottle, a patterned backpack, and a
 printed mug or book with cover art. Pick objects with **asymmetric texture,
@@ -220,36 +263,31 @@ extracts features only from the central 70% x 82% ellipse of the recognition
 crop; if the object is much smaller than the brackets, background keypoints can
 still get into that region. Fill the reticle for best results.
 
-1. Start `python main.py`. Click the preview.
-2. **Object A - bottle:** center it and press **A**. If no objects exist, it
-   registers immediately and records. Speak after the rising start tone; the
-   ending tone means the note is saved. The terminal prints the full object ID,
-   note ID, WAV path, and status.
-3. **Object B - backpack:** center it and press **A**. Because ObjectEcho is
-   conservative, a new object will usually show either *No confident match* or
-   an *Uncertain* candidate list. If prompted, press **N** to create a new object,
-   then speak.
-4. **Object C - mug/book:** repeat **A**, then **N** if prompted.
-5. Move objects around the room or move the camera. Center object A again and
-   press **P**. The original A recording should play. If a confirmation list
-   appears, press **C** for the top candidate or its **1-9** number.
-6. Center object B and press **P**. Its distinct recording should play.
-7. Optional: with object A centered, press **A** again. A confident match attaches
-   a second note to the same object. Press **P** and both notes play in order.
-8. Press **Q**, start the app again with `python main.py`, center A, press **P**.
-   The note still plays because objects, embeddings, reference images, ORB
-   features, and WAV files persist in `data/`.
-9. Press **L** at any time to print the registry for the video/debug record.
+1. Start `python main.py --web`. The browser opens the live interface.
+2. **Object A - bottle:** hold it inside the guides and click **Attach a note**.
+   Speak after the rising tone. The ending tone and the new object card confirm
+   that the WAV and captured image were saved.
+3. **Object B - backpack:** center it and click **Attach a note**. If the app
+   says the match is uncertain, click **Create new object**, then speak.
+4. **Object C - mug/book:** repeat, using **Create new object** if asked.
+5. Move objects or the camera. Center A again: the recognition banner and its
+   card should turn green with **IN VIEW**. Click **Play its notes** to hear A.
+6. Center B and click **Play its notes**. Verify B's distinct recording plays.
+7. Optional: center A and click **Attach a note** again. A second WAV is added;
+   **Play its notes** plays both. The card shows each note's own player.
+8. Stop the server with Ctrl+C, start `python main.py --web` again, and center A.
+   The same images, notes, and live recognition return from SQLite.
 
-Exact basic key sequence when each new-object decision is prompted:
+For the legacy keyboard demo, start `python main.py`, click the preview, and use
+this sequence (press **N** only when the uncertainty panel appears):
 
 ```text
 A  [speak]  A  N  [speak]  A  N  [speak]  P  P  A  [speak]  P  L  Q
 ```
 
-When the app already knows an object, **A** begins recording immediately. If
-an existing match is uncertain, **C** confirms the best candidate, **1-9**
-picks a specific candidate, **N** creates a new object, and **X** cancels.
+When an existing match is uncertain in the legacy app, **C** confirms the best
+candidate, **1-9** picks a specific candidate, **N** creates a new object, and
+**X** cancels.
 
 ## How recognition works
 
@@ -293,16 +331,18 @@ demo more permissive and increases the chance of a wrong association.
 ## Architecture
 
 ```text
-main.py       Camera loop, debug preview, A/P/R state machine, ambiguity UX
-camera.py     Persistent OpenCV VideoCapture with Windows backend fallback
-vision.py     CLIP/classic global encoder, ORB extractor/matcher,
-              feature persistence, hybrid ranking and decision gates
-storage.py    SQLite persistence and relative-path handling
-audio_io.py   Lazy sounddevice recording/playback, beeps, optional TTS
-config.py     JSON configuration, CLI overrides, validation
-keyboard.py   Non-blocking terminal keys (Windows POSIX-compatible)
-tests/        Storage, ranking, persistence, audio, simulated UI flow
-data/         Runtime-only SQLite DB, reference images, and WAV recordings
+main.py         CLI entry, legacy OpenCV app, and --web switch
+web_server.py   Threaded Flask server, live camera/recognition service, JSON API
+templates/      Polished single-page web interface (HTML/CSS/JS)
+camera.py       Persistent OpenCV VideoCapture with Windows backend fallback
+vision.py       CLIP/classic global encoder, ORB extractor/matcher,
+                feature persistence, hybrid ranking and decision gates
+storage.py      SQLite persistence and relative-path handling
+audio_io.py     Lazy sounddevice recording/playback, beeps, optional TTS
+config.py       JSON configuration, CLI overrides, validation
+keyboard.py     Non-blocking terminal keys (Windows POSIX-compatible)
+tests/          Storage, ranking, persistence, audio, Flask API, simulated UI
+data/           Runtime-only SQLite DB, reference images, and WAV recordings
 ```
 
 Data model:
@@ -316,6 +356,12 @@ The database uses foreign keys and WAL mode. File paths are stored relative to
 `data/` where possible. The model is loaded once at startup, embeddings and ORB
 features are precomputed at registration, and all saved data is loaded when the
 app starts. The camera and model are never reopened per action.
+
+The web mode runs one background camera reader, one recognition loop (about
+once per second), and a threaded Flask API. The browser never receives the
+webcam directly; it receives an MJPEG preview and JSON state from the local
+server. That keeps the tested Python recognition/audio pipeline as the single
+source of truth.
 
 ## Data and privacy
 
@@ -353,7 +399,9 @@ SQLite databases, temp WAV files, and simulated app keyboard flows. It verifies:
 - simulated new-object attach, existing-object attach, ambiguous attach/retrieve,
   exactly-one selection, no-note behavior, and playback routing,
 - audio WAV writing against a fake sound device, plus graceful missing-device
-  errors.
+  errors,
+- the Flask web API: empty state, live recognition, attaching and persisting a
+  note, media serving, object cards, and explicit ambiguous playback selection.
 
 To run the optional CLIP+ORB integration test after installing the CLIP extras:
 
@@ -365,7 +413,7 @@ python -m pytest -q tests/test_clip_optional.py
 ### Hardware test status and manual smoke test
 
 The automated suite passed on both the Linux development environment and a
-Windows 11 host with Python 3.13 (`34 passed, 1 skipped` on each; the skipped test
+Windows 11 host with Python 3.13 (`37 passed, 1 skipped` on each; the skipped test
 is the opt-in CLIP test). The Windows host hardware smoke test also succeeded:
 
 - DirectShow opened the integrated webcam at 1280x720 and returned a valid frame.
@@ -374,6 +422,11 @@ is the opt-in CLIP test). The Windows host hardware smoke test also succeeded:
 - The default speakers played that WAV back.
 - The optional CLIP+ORB integration test passed on Windows after downloading the
   model weights.
+- The browser UI was exercised headlessly against a synthetic camera/server:
+  live recognition badge, green object-card highlight, audio buttons, note
+  saving, pending candidate cards, and zero browser console errors.
+- The real Windows `--web` server started, served the page, reported live camera
+  state, and returned 960x540 JPEG frames.
 
 The Linux WSL environment had no camera/audio devices and correctly produced
 actionable errors instead of crashing.
@@ -390,8 +443,12 @@ demo laptop before recording the demo video:
    back.
 4. `python main.py --camera-test` should show a live, correctly exposed camera
    feed with a green square; press Q.
-5. Run the three-object walkthrough above, quit, restart, and retrieve at least
-   two notes. Watch the first-run CLIP download before the live demo.
+5. Start `python main.py --web` and run the three-object walkthrough above.
+   Confirm that captured images and WAV players appear on the object cards,
+   live recognition highlights the correct card, and both A and B play back.
+6. Stop the server, restart it, and confirm the same cards, images, notes, and
+   live recognition return from SQLite. Watch the first-run CLIP download before
+   the live demo.
 
 If `--record-test` or `--play-test` fails, no recognition code needs to be
 debugged; fix device selection or permissions first.
@@ -409,9 +466,19 @@ a Windows webcam by default; run the demo natively in Windows.
 privacy. On Linux install `libportaudio2`. A Bluetooth headset can have separate
 input/output indexes.
 
-**Preview receives no keys.** Click the preview, or use the terminal; terminal
-key input works while the terminal has focus. For a completely windowless test,
-use `--no-preview` from an interactive PowerShell terminal.
+**Web page does not open or says the site cannot be reached.** Keep the
+PowerShell running; the Flask process must stay alive. Check the printed URL and
+port, or use `--port 8081`. Open `http://127.0.0.1:<port>` manually.
+
+**Web record/play buttons do nothing.** The microphone and speaker belong to the
+Python server machine, not to the browser. Check `python main.py --list-devices`
+and verify the server terminal for an error. Browser note players need a click
+before audio can start.
+
+**Preview receives no keys in the legacy app.** Click the OpenCV preview, or use
+the terminal; terminal key input works while the terminal has focus. For a
+completely windowless test, use `--no-preview` from an interactive PowerShell
+terminal.
 
 **"No confident match" for a known object.** It is intentionally conservative.
 Press **C** if it is the top candidate, **1-9** if another candidate is correct,
@@ -443,6 +510,9 @@ the demo and use manual candidate selection for similar ones.
   tracking, and gaze tracking are intentionally absent. The object must be
   centered and reasonably fill the reticle; a tiny object leaves background
   texture inside the local-feature mask.
+- The web UI is a local single-user server; it has no accounts, TLS, or remote
+  multi-user sync. Recording uses the Python host's microphone and playback uses
+  either the browser or the server speakers depending on the action.
 - The keyboard is a prototype trigger; there is no voice-command interface yet.
 - Recording length is fixed per invocation; there is no tap-to-stop.
 - Single-user local database; no encryption, synchronization, or access control.

@@ -904,6 +904,15 @@ def build_parser() -> argparse.ArgumentParser:
         description="Attach and retrieve audio notes on physical objects using a webcam.",
     )
     add_config_arguments(parser)
+    web = parser.add_argument_group("web interface")
+    web.add_argument("--web", action="store_true",
+                     help="serve the polished local browser interface instead of the OpenCV app")
+    web.add_argument("--host", default="127.0.0.1",
+                     help="web server bind address (default: 127.0.0.1)")
+    web.add_argument("--port", type=int, default=8000,
+                     help="web server port (default: 8000)")
+    web.add_argument("--no-browser", action="store_true",
+                     help="do not automatically open the browser")
     return parser
 
 
@@ -912,6 +921,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     config = apply_cli_overrides(load_config(args.config), args)
 
+    if args.web:
+        from web_server import run_server
+        return run_server(config, args.host, args.port, not args.no_browser)
     if args.list_devices:
         AudioIO.print_devices()
         return 0
