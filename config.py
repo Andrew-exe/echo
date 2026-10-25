@@ -64,10 +64,12 @@ class AppConfig:
     local_weight: float = 0.60
     clip_global_floor: float = 0.45
     classic_global_floor: float = 0.18
-    min_score: float = 0.58
-    min_margin: float = 0.10
-    min_candidate_score: float = 0.32
-    min_local_for_match: float = 0.42
+    # Strict by default. Tighten further if a demo environment produces
+    # false positives; loosen only after testing on the actual objects.
+    min_score: float = 0.68
+    min_margin: float = 0.15
+    min_candidate_score: float = 0.40
+    min_local_for_match: float = 0.55
     max_observations_per_object: int = 12
 
     # Demo / UX

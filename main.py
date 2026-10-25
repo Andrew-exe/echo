@@ -986,7 +986,7 @@ def build_parser() -> argparse.ArgumentParser:
     maintenance.add_argument("--yes", action="store_true",
                              help="skip the interactive RESET confirmation")
     maintenance.add_argument("--strict", action="store_true",
-                             help="raise match thresholds for fewer false positives")
+                             help="re-assert the default strict thresholds if a config lowered them")
     return parser
 
 

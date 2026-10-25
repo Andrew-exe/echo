@@ -21,6 +21,10 @@ def test_defaults_and_validated_directories(tmp_path: Path) -> None:
     assert cfg.recordings_dir.exists()
     assert cfg.db_path.name == "objectecho.sqlite3"
     assert cfg.normalized_global_weight + cfg.normalized_local_weight == pytest.approx(1.0)
+    # Strict identity gates are the shipped defaults.
+    assert cfg.min_score == pytest.approx(0.68)
+    assert cfg.min_margin == pytest.approx(0.15)
+    assert cfg.min_local_for_match == pytest.approx(0.55)
 
 
 def test_load_json_and_ignore_unknown(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
