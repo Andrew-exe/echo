@@ -11,11 +11,6 @@ The primary demo is a polished **local web interface** with a live camera feed,
 continuous recognition status, captured reference images, and playable voice
 notes. A keyboard-first OpenCV app remains available as a screenless fallback.
 
-![ObjectEcho web interface](docs/web-preview.png)
-
-*Web UI preview. The camera feed and objects in this documentation image are
-synthetic test data, not a claim about a physical demo run.*
-
 ## The problem
 
 Physical objects carry useful context that software usually cannot see:
