@@ -12,6 +12,12 @@ feed, continuous recognition status, captured reference images, and playable
 voice notes. The original keyboard-first OpenCV application remains available as
 a screenless fallback.
 
+There is **no object-detection model** (no YOLO, SSD, segmentation, or gaze
+tracking). The centered camera crop is always compared against the registered
+objects; identity comes from a CLIP global embedding plus ORB local feature
+matching. See [How recognition works](#how-recognition-works) for the exact
+gates and how to make matching stricter.
+
 ![ObjectEcho web interface](docs/web-preview.png)
 
 *Web UI preview. The camera feed and objects shown in this documentation image
@@ -27,7 +33,7 @@ what if an object itself could carry a voice memory?
 
 ## What works
 
-- Local browser UI (`python main.py --web`) with a live camera feed, confidence
+- Local browser UI (`python main.py --web`) with a live camera feed, match-score
   badge, object cards, captured images, and playable saved notes.
 - Continuous live recognition: when a known object returns to view, its card
   lights up and the recognition banner identifies it.
@@ -108,7 +114,7 @@ From this repository in WSL:
 ```bash
 cd /home/andre/projects/Echo
 source .venv/bin/activate          # this workspace already has dependencies
-python -m pytest -q                # 37 passed, 1 optional CLIP test skipped
+python -m pytest -q                # 38 passed, 1 optional CLIP test skipped
 python main.py --list-objects
 python main.py --web               # browser UI; exits if no camera is attached
 ```
@@ -198,6 +204,8 @@ python main.py --record-seconds 8
 python main.py --input-device 1 --output-device 3
 python main.py --list-devices        # microphone/speaker indexes
 python main.py --list-objects        # inspect the persisted registry
+python main.py --reset-memory        # clear all objects, images, and notes (asks RESET)
+python main.py --reset-memory --yes  # same, without the confirmation prompt
 python main.py --camera-test         # camera preview only
 python main.py --min-score 0.62 --min-margin 0.12
 ```
@@ -294,6 +302,11 @@ candidate, **1-9** picks a specific candidate, **N** creates a new object, and
 Every action takes a central square crop. Recognition is intentionally not
 "CLIP says both images contain a bottle."
 
+**No detector is involved.** ObjectEcho does not search the full scene for
+bounding boxes. It only compares the centered crop with saved identities. Live
+"recognized" status means the centered patch passed the similarity gates below,
+not that a detector found an object.
+
 1. **Global channel:** normalize a CLIP image embedding, or use the offline
    HSV/HOG classic descriptor when CLIP is not installed. Compare it with every
    saved reference view using cosine similarity and a calibrated evidence
@@ -327,6 +340,15 @@ Thresholds, crop size, ORB settings, `local_mask_width`/`local_mask_height`, and
 weights are exposed in `config.py` / `config.json`; the most useful thresholds
 and crop size are also CLI flags. Lowering `min_score` or `min_margin` makes the
 demo more permissive and increases the chance of a wrong association.
+
+For a quick conservative profile, add `--strict`. It raises the default gates to
+`min_score=0.68`, `min_margin=0.15`, `min_local_for_match=0.55`, and
+`min_candidate_score=0.40`. False positives usually mean background texture or a
+similar-looking object is producing ORB inliers. Re-enroll with the target
+filling the central reticle and avoid reference views where the object is small
+or the background dominates. Because the global CLIP channel is semantic, it is
+never sufficient by itself; automatic matches also require the ORB local gate,
+a score threshold, and a margin over the runner-up.
 
 ## Architecture
 
@@ -380,7 +402,29 @@ not encrypted. This prototype always starts the microphone only after the start
 tone, and the end tone is played after capture stops. Obtain consent before
 recording people in the environment.
 
+## Resetting object memory
+
+Stop the web server or legacy app first (Ctrl+C), then reset the same data
+directory the app uses. The command prints the object/view/note counts and asks
+for the literal word `RESET` before deleting anything:
+
+```powershell
+python main.py --reset-memory --data-dir "$env:USERPROFILE\objectecho-data"
+```
+
+For non-interactive use, add `--yes`:
+
+```powershell
+python main.py --reset-memory --yes --data-dir "$env:USERPROFILE\objectecho-data"
+```
+
+This removes `objectecho.sqlite3`, reference images, and WAV files while leaving
+unrelated files in the data directory alone. Restart the app afterward; it will
+create a fresh empty registry. The current default Windows setup stores its
+memory in `C:\Users\andre\objectecho-data`, not inside the WSL checkout.
+
 ## Testing and verification
+
 
 From the repository root:
 
@@ -413,7 +457,7 @@ python -m pytest -q tests/test_clip_optional.py
 ### Hardware test status and manual smoke test
 
 The automated suite passed on both the Linux development environment and a
-Windows 11 host with Python 3.13 (`37 passed, 1 skipped` on each; the skipped test
+Windows 11 host with Python 3.13 (`38 passed, 1 skipped` on each; the skipped test
 is the opt-in CLIP test). The Windows host hardware smoke test also succeeded:
 
 - DirectShow opened the integrated webcam at 1280x720 and returned a valid frame.

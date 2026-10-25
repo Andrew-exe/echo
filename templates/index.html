@@ -405,7 +405,7 @@
                 <strong class="recognition-title" id="recognitionTitle">Scanning the room</strong>
                 <span class="recognition-sub" id="recognitionSub">Center an object inside the guides.</span>
               </div>
-              <div class="confidence"><strong id="recognitionConfidence">—</strong><small>CONFIDENCE</small></div>
+              <div class="confidence"><strong id="recognitionConfidence">—</strong><small>MATCH SCORE</small></div>
             </div>
 
             <div class="busy-overlay" id="busyOverlay" hidden>
@@ -712,7 +712,7 @@
         summary.textContent = "No memories yet. Attach a note to the centered object.";
       } else if (live?.status === "match" && live.candidates?.length) {
         const top = live.candidates[0];
-        summary.innerHTML = `<span style="color:var(--mint)">● ${escapeHtml(top.label)} is in view</span> · ${Math.round(top.score * 100)}% confidence`;
+        summary.innerHTML = `<span style="color:var(--mint)">● ${escapeHtml(top.label)} is in view</span> · ${Math.round(top.score * 100)}% match`;
       } else if (live?.status === "ambiguous") {
         summary.textContent = "Multiple objects look similar. Use Play or Attach to confirm.";
       } else {

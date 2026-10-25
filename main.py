@@ -11,6 +11,7 @@ terminal keyboard controls.
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 import time
 import traceback
@@ -898,6 +899,72 @@ def run_list_objects(config: AppConfig) -> int:
     return 0
 
 
+def run_reset_memory(config: AppConfig, assume_yes: bool = False) -> int:
+    """Delete ObjectEcho's database, reference images, and recordings.
+
+    This intentionally touches only ObjectEcho's known runtime paths, leaving
+    config.json, source code, and unrelated files in the data directory alone.
+    """
+    storage = Storage(config.data_dir, config.db_path)
+    try:
+        objects = storage.list_objects()
+        observations = storage.list_observations()
+        notes = storage.list_notes()
+    finally:
+        storage.close()
+
+    print(f"Data directory: {config.data_dir}")
+    print(
+        f"About to delete {len(objects)} object(s), {len(observations)} "
+        f"reference view(s), and {len(notes)} audio note(s)."
+    )
+    print("Stop the web server or legacy app before resetting.")
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            print(
+                "Refusing to erase memory without confirmation. Re-run with --yes.",
+                file=sys.stderr,
+            )
+            return 2
+        answer = input("Type RESET to permanently erase this object memory: ")
+        if answer != "RESET":
+            print("Reset cancelled. Nothing was deleted.")
+            return 1
+
+    failed: list[str] = []
+    # SQLite main DB and WAL/SHM sidecars.
+    for db_file in config.data_dir.glob("objectecho.sqlite3*"):
+        try:
+            db_file.unlink()
+        except OSError as exc:
+            failed.append(f"{db_file}: {exc}")
+    for folder in (config.objects_dir, config.recordings_dir):
+        folder.mkdir(parents=True, exist_ok=True)
+        for child in folder.iterdir():
+            if child.name == ".gitkeep":
+                continue
+            try:
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            except OSError as exc:
+                failed.append(f"{child}: {exc}")
+
+    if failed:
+        print("Reset incomplete:", file=sys.stderr)
+        for failure in failed:
+            print(f"  - {failure}", file=sys.stderr)
+        if any("objectecho.sqlite3" in item for item in failed):
+            print(
+                "A running server may still hold the database. Stop it, then retry.",
+                file=sys.stderr,
+            )
+        return 2
+    print("Object memory cleared. Reference images and WAV files were deleted.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="objectecho",
@@ -913,6 +980,13 @@ def build_parser() -> argparse.ArgumentParser:
                      help="web server port (default: 8000)")
     web.add_argument("--no-browser", action="store_true",
                      help="do not automatically open the browser")
+    maintenance = parser.add_argument_group("maintenance")
+    maintenance.add_argument("--reset-memory", action="store_true",
+                             help="permanently delete all objects, reference images, and audio notes")
+    maintenance.add_argument("--yes", action="store_true",
+                             help="skip the interactive RESET confirmation")
+    maintenance.add_argument("--strict", action="store_true",
+                             help="raise match thresholds for fewer false positives")
     return parser
 
 
@@ -920,7 +994,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     config = apply_cli_overrides(load_config(args.config), args)
+    if args.strict:
+        config.min_score = max(config.min_score, 0.68)
+        config.min_margin = max(config.min_margin, 0.15)
+        config.min_local_for_match = max(config.min_local_for_match, 0.55)
+        config.min_candidate_score = max(config.min_candidate_score, 0.40)
+        config.validate()
+        print(
+            "[config] Strict matching: "
+            f"min_score={config.min_score:.2f}, "
+            f"min_margin={config.min_margin:.2f}, "
+            f"min_local={config.min_local_for_match:.2f}",
+            flush=True,
+        )
 
+    if args.reset_memory:
+        return run_reset_memory(config, assume_yes=args.yes)
     if args.web:
         from web_server import run_server
         return run_server(config, args.host, args.port, not args.no_browser)
